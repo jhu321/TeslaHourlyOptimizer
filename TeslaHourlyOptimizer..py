@@ -264,7 +264,7 @@ while loop_counter<10:
                 battery_power=float(battery[0].get_battery_data()['power_reading'][0]['battery_power'])
                 solar_power=float(battery[0].get_battery_data()['power_reading'][0]['solar_power'])
                 grid_power=float(battery[0].get_battery_data()['power_reading'][0]['grid_power'])
-                if battery_power <= -500 and grid_power>0:
+                if battery_power <= -500 and grid_power>=(-1*battery_power*.9):
                     #autonomous ROI model is doing something weird since after 30 seconds battery should be positive power so forcing to operation mode of self 
                     print(battery[0].get_battery_data())
                     print('setting to self and backup_reserve_percent to ',battery[0].get_battery_data()['backup']['backup_reserve_percent'])
