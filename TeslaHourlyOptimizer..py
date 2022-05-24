@@ -61,7 +61,7 @@ def stopOpenEVSE():
     try:
         print('Stop OPENEVSE Charging')
         min_index, min_value = getLowestFour()
-        reset_timer_URL='http://%s/r?rapi=$ST %d 0 %d 0'% (openevse_ip,min(min_index),max(min_index))
+        reset_timer_URL='http://%s/r?rapi=$ST %d 0 %d 0'% (openevse_ip,min(min_index),min(min_index)+3)
         stop_charge_url='http://%s/r?rapi=$FS' % (openevse_ip)
         requests.get(stop_charge_url)
         requests.get(reset_timer_URL)
