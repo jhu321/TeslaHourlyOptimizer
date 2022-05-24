@@ -1,0 +1,17 @@
+[Credentials]
+TeslaUserID = your@email
+
+[Email]
+smtp_user = your@smtp-server-email
+smtp_password = clear_text_password
+notify_email = your@mail
+smtp_server = smtp-server
+smtp_port = smtp-server-port-number
+send_email_alert = 0
+
+[Tesla_Cars]
+control_cars = 0
+
+[OpenEVSE]
+control_openevse = 0
+openevse_ip = XXX.XXX.XXX.XXX
