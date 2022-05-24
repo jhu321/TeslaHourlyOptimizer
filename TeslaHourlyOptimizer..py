@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from unicodedata import normalize
-from datetime import datetime
+import datetime
 import configparser
 
 def readConfig():
@@ -18,14 +18,23 @@ def readConfig():
    return config
 
 def getLowestFour():
-    today=datetime.today().strftime('%Y%m%d')
-    URL='https://hourlypricing.comed.com/rrtp/ServletFeed?type=pricingtabledual&date='+today
+    tomorrow=datetime.datetime.today()
+    tomorrow+=datetime.timedelta(days=1)
+    today=datetime.datetime.today().strftime('%Y%m%d')
+    tomorrow=tomorrow.strftime('%Y%m%d')
+    URL='https://hourlypricing.comed.com/rrtp/ServletFeed?type=pricingtabledual&date='+tomorrow
     page=requests.get(URL)
+    # first try tomorrow to see if we have data... if we do then use tomorrow.. else today
+    if(len(page.text) <=5):
+        URL='https://hourlypricing.comed.com/rrtp/ServletFeed?type=pricingtabledual&date='+today
+        page=requests.get(URL)
     tab='<table><tr><td>time</td><td>forecast</td><td>actual</td></tr>'+page.text+'</table>'
     tab=tab.replace("&cent;","")
     #print(tab)
     table_MN = pd.read_html(tab,header=0)
+    #print(table_MN[0])
     s = table_MN[0]['forecast']
+    #print(s.tolist())
     inputlist=s.tolist()
     min_value=min(inputlist)
     min_index=[]
