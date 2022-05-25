@@ -114,7 +114,7 @@ def startTesla():
         with teslapy.Tesla(teslaUserID) as tesla:
             vehicles = tesla.vehicle_list()
             print("checking connection")
-            if vehicles[0].get_vehicle_data()['charge_state']['charging_state']!='Disconnected':
+            if vehicles[0].get_vehicle_data()['charge_state']['charging_state'] not in ['Charging','Complete','Disconnected']:
                 print("connected")
                 vehicles[0].sync_wake_up()
                 vehicles[0].command('START_CHARGE')
@@ -131,9 +131,9 @@ def stopTesla():
     try:
         with teslapy.Tesla(teslaUserID) as tesla:
             vehicles = tesla.vehicle_list()
-            print("checking connection")
-            if vehicles[0].get_vehicle_data()['charge_state']['charging_state']!='Disconnected':
-                print("connected")
+            print("checking charging state")
+            if vehicles[0].get_vehicle_data()['charge_state']['charging_state'] in ['Charging']:
+                print("currently charging stop it")
                 vehicles[0].sync_wake_up()
                 vehicles[0].command('STOP_CHARGE')
     except Exception as e:
