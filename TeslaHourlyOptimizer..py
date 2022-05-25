@@ -103,11 +103,11 @@ def isTeslaAtHome():
         return False    
 
 def startTesla():
-    if isTeslaAtHome()==False:
-        return
     config=readConfig()
     if config['Tesla_Cars']['control_cars']!='1':
             return
+    if isTeslaAtHome()==False:
+        return
     teslaUserID=config['Credentials']['TeslaUserID']
     print('start Tesla Charging')
     try:
@@ -121,10 +121,11 @@ def startTesla():
     except Exception as e:
         print(e)
 def stopTesla():
-    if isTeslaAtHome()==False:
-        return
+    
     config=readConfig()
     if config['Tesla_Cars']['control_cars']!='1':
+        return
+    if isTeslaAtHome()==False:
         return
     teslaUserID=config['Credentials']['TeslaUserID']
     print('stop Tesla Charging')
