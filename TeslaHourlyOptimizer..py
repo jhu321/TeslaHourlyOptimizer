@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from unicodedata import normalize
 import datetime
 import configparser
+import geopy.distance
 
 def readConfig():
    config = configparser.ConfigParser()
@@ -77,7 +78,33 @@ def stopOpenEVSE():
     except:
         sendMail('N/A','N/A','openevse not responding')
 
+def isTeslaAtHome():
+    try:
+        config=readConfig()
+        if config['Tesla_Cars']['control_cars']!='1':
+            return
+        teslaUserID=config['Credentials']['TeslaUserID']
+        home_lat=float(config['Tesla_Cars']['home_lat'])
+        home_long=float(config['Tesla_Cars']['home_long'])
+        home = (home_lat,home_long)
+        #print(home_lat," ",home_long)
+        with teslapy.Tesla(teslaUserID) as tesla:
+            vehicles = tesla.vehicle_list()
+            car_lat = float(vehicles[0].get_vehicle_data()['drive_state']['latitude'])
+            car_long = float(vehicles[0].get_vehicle_data()['drive_state']['longitude'])
+            car = (car_lat, car_long)
+            #print(car)
+            #print(geopy.distance.geodesic(home,car).m)
+            if geopy.distance.geodesic(home,car).m < 50:
+                return True
+        return False
+    except Exception as e:
+        print(e)
+        return False    
+
 def startTesla():
+    if isTeslaAtHome()==False:
+        return
     config=readConfig()
     if config['Tesla_Cars']['control_cars']!='1':
             return
@@ -85,12 +112,17 @@ def startTesla():
     print('start Tesla Charging')
     try:
         with teslapy.Tesla(teslaUserID) as tesla:
-                        vehicles = tesla.vehicle_list()
-                        vehicles[0].sync_wake_up()
-                        vehicles[0].command('START_CHARGE')
+            vehicles = tesla.vehicle_list()
+            print("checking connection")
+            if vehicles[0].get_vehicle_data()['charge_state']['charging_state']!='Disconnected':
+                print("connected")
+                vehicles[0].sync_wake_up()
+                vehicles[0].command('START_CHARGE')
     except Exception as e:
         print(e)
 def stopTesla():
+    if isTeslaAtHome()==False:
+        return
     config=readConfig()
     if config['Tesla_Cars']['control_cars']!='1':
         return
@@ -98,9 +130,12 @@ def stopTesla():
     print('stop Tesla Charging')
     try:
         with teslapy.Tesla(teslaUserID) as tesla:
-                        vehicles = tesla.vehicle_list()
-                        vehicles[0].sync_wake_up()
-                        vehicles[0].command('STOP_CHARGE')
+            vehicles = tesla.vehicle_list()
+            print("checking connection")
+            if vehicles[0].get_vehicle_data()['charge_state']['charging_state']!='Disconnected':
+                print("connected")
+                vehicles[0].sync_wake_up()
+                vehicles[0].command('STOP_CHARGE')
     except Exception as e:
         print(e)
 def sendMail(rate, battery, mode):
@@ -156,7 +191,7 @@ config=readConfig()
 #print(config)
 
 teslaUserID=config['Credentials']['TeslaUserID']
-
+#print(isTeslaAtHome())
 while loop_counter<10:
 #while 1==0:
     try:
