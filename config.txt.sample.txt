@@ -11,7 +11,8 @@ send_email_alert = 0
 
 [Tesla_Cars]
 control_cars = 0
-
+home_lat = 0.00000
+home_long = 0.00000
 [OpenEVSE]
 control_openevse = 0
 openevse_ip = XXX.XXX.XXX.XXX
