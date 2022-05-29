@@ -12,11 +12,7 @@ from unicodedata import normalize
 import datetime
 import configparser
 import geopy.distance
-
-def readConfig():
-   config = configparser.ConfigParser()
-   config.read('config.txt')
-   return config
+import DataUtils
 
 def getLowestFour():
     tomorrow=datetime.datetime.today()
@@ -50,7 +46,6 @@ def getLowestFour():
     return min_index , min_value
 
 def startOpenEVSE():
-    config=readConfig()
     if config['OpenEVSE']['control_openevse']!='1':
             return
     openevse_ip=config['OpenEVSE']['openevse_ip']
@@ -64,7 +59,6 @@ def startOpenEVSE():
         sendMail('N/A','N/A','openevse not responding')
 
 def stopOpenEVSE():
-    config=readConfig()
     if config['OpenEVSE']['control_openevse']!='1':
             return
     openevse_ip=config['OpenEVSE']['openevse_ip']
@@ -80,7 +74,6 @@ def stopOpenEVSE():
 
 def isTeslaAtHome():
     try:
-        config=readConfig()
         if config['Tesla_Cars']['control_cars']!='1':
             return
         teslaUserID=config['Credentials']['TeslaUserID']
@@ -103,7 +96,6 @@ def isTeslaAtHome():
         return False    
 
 def startTesla():
-    config=readConfig()
     if config['Tesla_Cars']['control_cars']!='1':
             return
     if isTeslaAtHome()==False:
@@ -122,7 +114,6 @@ def startTesla():
         print(e)
 def stopTesla():
     
-    config=readConfig()
     if config['Tesla_Cars']['control_cars']!='1':
         return
     if isTeslaAtHome()==False:
@@ -141,7 +132,6 @@ def stopTesla():
         print(e)
 def sendMail(rate, battery, mode):
     #read config... if send_email_alert isn't 1 then skip and return immediately
-    config = readConfig()
     if config['Email']['send_email_alert']!='1':
         return
 
@@ -188,7 +178,7 @@ hold_hour=-1
 comEd_URL="https://hourlypricing.comed.com/api?type=currenthouraverage"
 print(comEd_URL)
 
-config=readConfig()
+config=DataUtils.readConfig()
 #print(config)
 
 teslaUserID=config['Credentials']['TeslaUserID']
@@ -400,6 +390,6 @@ while loop_counter<10:
             print ("not on the 5 minute mark: current min is ", currentMin," adjusting sleep by ",sleptTime )
         time.sleep(300-sleptTime)
     except Exception as e:
-        print("tesla choked sleeping for 1 minute seconds and trying again")
+        print("tesla choked sleeping for 1 minute  and trying again")
         print(e)
         time.sleep(60)
