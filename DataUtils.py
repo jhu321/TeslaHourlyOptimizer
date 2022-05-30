@@ -8,7 +8,6 @@ import teslapy
 import geopy.distance
 import pytz
 import json
-import pyowm
 import configparser
 import pickle
 
@@ -20,7 +19,7 @@ def readConfig():
 def initHourlyHistory():
     hourly_history={}
     for k in range(24):
-        hourly_history['hour'+str(k)]={'hour':0,'energy':0, 'temp':0, 'forecasted temp':0, 'actual price':0,'forecasted price':0}
+        hourly_history['hour'+str(k)]={'hour':0,'energy':0,'solar':0 ,'grid':0,'battery':0, 'temp':0,'forecasted energy':0, 'forecasted temp':0, 'actual price':0,'forecasted price':0}
     return hourly_history
 
 
@@ -68,14 +67,28 @@ def getSiteTOUHistory(config, date, hourly_history):
             power=0
             
             #print(hourly_history)
-
             for i in powerHistory['time_series']:
                 d=datetime.datetime.fromisoformat(i['timestamp'])
                 #if d.hour==1 and d.day==24:
                 #print(d.hour)
+                #init if missing
+                if 'solar' not in hourly_history['hour'+str(d.hour)]:
+                    hourly_history['hour'+str(d.hour)]['solar']=0
+                if 'battery' not in hourly_history['hour'+str(d.hour)]:
+                    hourly_history['hour'+str(d.hour)]['battery']=0
+                if 'grid' not in hourly_history['hour'+str(d.hour)]:
+                    hourly_history['hour'+str(d.hour)]['grid']=0
+                if 'hour' not in hourly_history['hour'+str(d.hour)]:
+                    hourly_history['hour'+str(d.hour)]['hour']=0
+                if 'energy' not in hourly_history['hour'+str(d.hour)]:
+                    hourly_history['hour'+str(d.hour)]['energy']=0
+
                 hourly_history['hour'+str(d.hour)]['energy']+=(i['solar_power']+i['battery_power']+i['grid_power'])*(1/12)
+                hourly_history['hour'+str(d.hour)]['solar']+=(i['solar_power'])*(1/12)
+                hourly_history['hour'+str(d.hour)]['battery']+=(i['battery_power'])*(1/12)
+                hourly_history['hour'+str(d.hour)]['grid']+=(i['grid_power'])*(1/12)
                 hourly_history['hour'+str(d.hour)]['hour']=d.hour
-            #print(hourly_history)
+            print(hourly_history)
             #print(i)
             return hourly_history
             
@@ -84,19 +97,47 @@ def getSiteTOUHistory(config, date, hourly_history):
 
     except Exception as e: 
         print(e)
+        return hourly_history
 
 def generateHistory(config,num_days):
-    
     count = num_days
     now = datetime.datetime.today()
     totalHistory={}
     while count>0:
         d = datetime.timedelta(days = count)
         print(d)
-        current_date = now - d
+        current_date = now - d 
         totalHistory[current_date.strftime('%Y-%m-%d')]={'date': current_date.strftime('%Y-%m-%d'), 'data' : getSiteTOUHistory(config,current_date,initHourlyHistory())}
         count=count-1  
     return totalHistory    
+
+def createHistory(config,current_date,totalHistory):
+        print("create history:"+ current_date.strftime('%Y-%m-%d') )
+        if current_date.strftime('%Y-%m-%d') in totalHistory:
+            history_day = totalHistory[current_date.strftime('%Y-%m-%d')]['data']
+            getSiteTOUHistory(config,current_date,history_day)
+        else:
+            history_day = initHourlyHistory()
+            totalHistory[current_date.strftime('%Y-%m-%d')]={'date': current_date.strftime('%Y-%m-%d'), 'data' : getSiteTOUHistory(config,current_date,history_day)}
+        print(history_day)
+
+
+def updateHistory(config,num_days,totalHistory):
+    count = num_days
+    now = datetime.datetime.today()
+    while count>=0:
+        d = datetime.timedelta(days = count)
+        print(d)
+        current_date = now - d 
+        if current_date.strftime('%Y-%m-%d') in totalHistory:
+            history_day = totalHistory[current_date.strftime('%Y-%m-%d')]['data']
+            getSiteTOUHistory(config,current_date,history_day)
+        else:
+            history_day = initHourlyHistory()
+            totalHistory[current_date.strftime('%Y-%m-%d')]={'date': current_date.strftime('%Y-%m-%d'), 'data' : getSiteTOUHistory(config,current_date,history_day)}
+        count=count-1  
+    return totalHistory    
+
 
 def calcAvgEnergyUsageByHour(history):
     results = {}
@@ -111,14 +152,14 @@ def calcAvgEnergyUsageByHour(history):
 def kelvinToFahrenheit(kelvin):
     return kelvin * 1.8 - 459.67
 
-def getWeather(dt):
+def getWeather(config,dt):
 
     try:
         with open('weather_history.json','r') as weather_history_file:
             w_hist = json.load(weather_history_file)
     except FileNotFoundError:
             w_hist = {}
-    if (str(dt) not in w_hist):
+    if (str(dt) not in w_hist or datetime.datetime.fromtimestamp(dt).date()==datetime.datetime.today().date()):
         owm =config['Credentials']['OMW_key']
         print(owm)
         onecall_request = 'http://api.openweathermap.org/data/3.0/onecall/timemachine?lat=%s&lon=%s&dt=%s&appid=%s'
@@ -138,10 +179,13 @@ def popDataWithWeather(config, data):
     onecall_request = 'http://api.openweathermap.org/data/3.0/onecall/timemachine?lat=%s&lon=%s&dt=%s&appid=%s'
     
     date= datetime.datetime.fromisoformat(data['date'])
+    #we only populate today and before
+    if date>datetime.datetime.now():
+        return
     #loop through each hour and see if temp is set
     for i in data['data']:
-        if data['data'][i]['temp']==0:
-            #we're here so temp is missing set the temp
+        if data['data'][i]['temp']==0 or date.date()==datetime.datetime.today().date():
+            #we're here so temp is missing set the temp or its today
             hour = data['data'][i]['hour']
             working_date = datetime.datetime(
                 date.year,
@@ -153,7 +197,7 @@ def popDataWithWeather(config, data):
                 0)
             print(working_date)
             print(working_date.timestamp())
-            weather = getWeather(int(working_date.timestamp()))
+            weather = getWeather(config,int(working_date.timestamp()))
             data['data'][i]['temp']=kelvinToFahrenheit(weather['data'][0]['temp'])
     #owm_url = onecall_request % (config['Tesla_Cars']['home_lat'],config['Tesla_Cars']['home_long'],str(int(working_date.timestamp())),owm)
     #print(owm_url)
@@ -250,7 +294,13 @@ def calcTempAndTimeImpactOnEnergy(history):
     
     return work_temp
 
-def getForecast():
+def saveHistory(history):
+        #save history
+    with open('history_file.json','w') as history_file:
+        json.dump(history,history_file)
+    
+
+def getForecast(config):
     owm =config['Credentials']['OMW_key']
     print(owm)
     onecall_request = 'http://api.openweathermap.org/data/3.0/onecall?lat=%s&lon=%s&appid=%s'
@@ -259,10 +309,23 @@ def getForecast():
     results = requests.get(owm_url)
     print(results.json())
     return results.json()   
+
+def updateHistoryWithForecast(config, forecast, history):
+
+    for i in forecast:
+        dt = datetime.datetime.fromtimestamp(i['dt'])
+        
+        #check if the day exist...
+        if dt.strftime('%Y-%m-%d') not in history:
+            createHistory(config,dt,history)
+        historyDayData = history[dt.strftime('%Y-%m-%d')]['data']
+        print(dt)
+        print(dt.hour)
+        historyDayData['hour'+str(dt.hour)]['forecasted temp']=kelvinToFahrenheit(i['temp'])
+
+
 def getForecastTemps(forecast):
     results = {}
-
-    print(forecast)
     for i in forecast:
         dt = datetime.datetime.fromtimestamp(i['dt'])
         print(dt)
@@ -271,21 +334,39 @@ def getForecastTemps(forecast):
     print(results)
     return results
 
-def calcTodayRemainingEnergyNeed(time_energy_lookup):
-    forecast = getForecast()
+def calcTodayRemainingEnergyNeed(config,time_energy_lookup, history):
+    forecast = getForecast(config)
     now = datetime.datetime.now()
     print(now.hour)
     forecast_temps= getForecastTemps(forecast['hourly'])
-    forecast_energy={}
+    updateHistoryWithForecast(config, forecast['hourly'],history)
     energy_needed = 0 
+#lets also update history with the forecasted energy needed
+    historyDayData=history[now.strftime('%Y-%m-%d')]['data']
     for i in range(now.hour,23):
         print(time_energy_lookup[str(i)])
         print(forecast_temps[str(i)]['index'])
         print(str(i)+ " hour needs "+str(time_energy_lookup[str(i)][str(forecast_temps[str(i)]['index'])]))
         print(i)
         energy_needed = energy_needed+ time_energy_lookup[str(i)][str(forecast_temps[str(i)]['index'])]
+        historyDayData['hour'+str(i)]['forecasted energy']=time_energy_lookup[str(i)][str(forecast_temps[str(i)]['index'])]
+        print(historyDayData)
         print (energy_needed)
     return energy_needed
+
+def getHistory(config):
+        try:
+            with open('history_file.json','r') as history_file:
+                history = json.load(history_file)
+        except FileNotFoundError:
+            history = generateHistory(config,30)
+            with open('history_file.json','w') as history_file:
+                json.dump(history,history_file)
+        
+        for i in history:
+            popDataWithWeather(config,history[i])
+        return history
+
 if __name__ == "__main__":
     with teslapy.Tesla('jhu321@hotmail.com') as tesla:
         vehicles = tesla.vehicle_list()
@@ -330,28 +411,35 @@ if __name__ == "__main__":
         
         #history_file = open("history_file.json","w")
         #json.dump(generateHistory(config,5),history_file)
-        try:
-            with open('history_file.json','r') as history_file:
-                history = json.load(history_file)
-        except FileNotFoundError:
-            history = generateHistory(config,30)
-            with open('history_file.json','w') as history_file:
-                json.dump(history,history_file)
+        #try:
+        #    with open('history_file.json','r') as history_file:
+        #        history = json.load(history_file)
+        #except FileNotFoundError:
+        #    history = generateHistory(config,30)
+        #    with open('history_file.json','w') as history_file:
+        #        json.dump(history,history_file)
         
-        #print(history['2022-05-25']['data']['hour5'])
-        for i in history:
-            popDataWithWeather(config,history[i])
+        #for i in history:
+         #   popDataWithWeather(config,history[i])
 
-        #save history
-        #with open('history_file.json','w') as history_file:
-            #json.dump(history,history_file)
+
+
+        #updateHistory(config,31,history)
+        #saveHistory(history)
+
         
+        #save history
+        history = getHistory(config)
         time_energy_lookup = calcTempAndTimeImpactOnEnergy(history)
-        calcTodayRemainingEnergyNeed(time_energy_lookup)
-        hourlyAvg = calcAvgEnergyUsageByHour(history)
-        total = 0 
-        for i in hourlyAvg:
-            total+=hourlyAvg[i]
+        calcTodayRemainingEnergyNeed(config, time_energy_lookup, history)
+        updateHistory(config,1,history)
+        print(history['2022-05-30']['data'])
+        saveHistory(history)
+
+        #hourlyAvg = calcAvgEnergyUsageByHour(history)
+        #total = 0 
+        #for i in hourlyAvg:
+        #    total+=hourlyAvg[i]
 
         #print(hourlyAvg)
         #print(total)

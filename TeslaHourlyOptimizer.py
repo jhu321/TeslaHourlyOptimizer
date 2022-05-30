@@ -83,6 +83,9 @@ def isTeslaAtHome():
         #print(home_lat," ",home_long)
         with teslapy.Tesla(teslaUserID) as tesla:
             vehicles = tesla.vehicle_list()
+            #if gps data is old then sync and wake up
+            if (datetime.datetime.now()-datetime.datetime.fromtimestamp(vehicles[0].get_vehicle_data()['drive_state']['gps_as_of'])).total_seconds() > 60*60*3:
+                vehicles[0].sync_wake_up()
             car_lat = float(vehicles[0].get_vehicle_data()['drive_state']['latitude'])
             car_long = float(vehicles[0].get_vehicle_data()['drive_state']['longitude'])
             car = (car_lat, car_long)
@@ -172,6 +175,7 @@ currentState=-1
 
 loop_counter=0
 hold_hour=-1
+currentHour=-1
 
 
 #comEd_URL="https://hourlypricing.comed.com/api?type=5minutefeed"
@@ -230,13 +234,26 @@ while loop_counter<10:
         
         
         time_to_charge = (total_pack_energy-energy_left)/15000
+        lastHour=currentHour
         currentHour = int(time.strftime("%H",time.localtime()))
         currentMin = int(time.strftime("%M",time.localtime()))
+
+        TodayRemainingEnergyNeed=0
 
         #if we transitioned to high anytime within the hour, then we assume the rest of the hour must be bouncing around high so we hold until the top of the next hour
 
         print("current Hour",currentHour," current min", currentMin)
         print("time to charge", time_to_charge, "hrs")
+        if lastHour!=currentHour:
+            #we're here so we're at the top of the hour.. lets get latest forecasts and save it to history
+            history = DataUtils.getHistory(config)
+            time_energy_lookup = DataUtils.calcTempAndTimeImpactOnEnergy(history)
+            TodayRemainingEnergyNeed=DataUtils.calcTodayRemainingEnergyNeed(config, time_energy_lookup, history)
+            DataUtils.updateHistory(config,0,history)
+            print(history[datetime.datetime.today().date().strftime('%Y-%m-%d')]['data'])
+            DataUtils.saveHistory(history)
+
+
 
         for i in jsonResponse:
             millisUTC=i['millisUTC']
@@ -284,11 +301,36 @@ while loop_counter<10:
             stopTesla()
         #if price is high and we do have solar coming in then we need to use battery we don't want to sell solar right now because net metering ain't working
         elif latestPrice > highLowCutOff and solar_power>100 and (currentState!=2 and currentState!=0):
-            print("alert transition to high ",latestUTC,":",latestPrice)
+            print("alert price is high... and we have solar... assumption is price is higher later in the day so we should use our solar and recharge not a always true assumption ",latestUTC,":",latestPrice)
             with teslapy.Tesla(teslaUserID) as tesla:
                 battery = tesla.battery_list()
                 # we force set to autonomous because we want to incent sending power to the grid as price is high
-                battery[0].set_operation('autonomous')
+                #api funkiness... gotta keep looping until total is a very large positive it should be 40,000
+                tmp_percentage_charged = 0.0
+                total=0.0
+                while total < 1000:
+                    currentBatt = battery[0].get_battery_data()
+                    total=currentBatt['total_pack_energy']
+                    left=currentBatt['energy_left']
+                    tmp_percentage_charged= int((left/total) *100)
+                    if total < 1000:
+                        sleep(30)
+                        sleptTime+=30
+
+                total=currentBatt['total_pack_energy']
+                left=currentBatt['energy_left']
+
+                tmp_percentage_charged= int((left/total) *100)
+                targetReserve = int((TodayRemainingEnergyNeed / total) *100)
+
+                #peak solar is around 10-11am... we should be making decision around this time
+                #we only go into autonomoous if we have enough battery to cover the day.. else we go into self
+
+                if currentHour>9 and left>=TodayRemainingEnergyNeed:
+                    battery[0].set_operation('autonomous')
+                else:
+                    battery[0].set_operation('autonomous')
+                #we currently still don't reserve the battery... but we need to look at forecast price action later to determine if we should save battery now or use it... thats logic for another day
                 battery[0].set_backup_reserve_percent(1)
                 sticky_backup_reserve=1
                 print('setting to autonomous and backup_reserve_percent to ',battery[0].get_battery_data()['backup']['backup_reserve_percent'])
