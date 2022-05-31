@@ -65,7 +65,13 @@ def getSiteTOUHistory(config, date, hourly_history):
                '%Y-%m-%dT%H:%M:%SZ'))
             #print(powerHistory)
             power=0
-            
+            #reinit to 0 history for the day so repeated runs don't end up cumulative 
+            for i in range(24):
+                hourly_history['hour'+str(i)]['energy']=0
+                hourly_history['hour'+str(i)]['solar']=0
+                hourly_history['hour'+str(i)]['battery']=0
+                hourly_history['hour'+str(i)]['grid']=0
+
             #print(hourly_history)
             for i in powerHistory['time_series']:
                 d=datetime.datetime.fromisoformat(i['timestamp'])
@@ -430,11 +436,15 @@ if __name__ == "__main__":
         
         #save history
         history = getHistory(config)
-        time_energy_lookup = calcTempAndTimeImpactOnEnergy(history)
-        calcTodayRemainingEnergyNeed(config, time_energy_lookup, history)
-        updateHistory(config,1,history)
-        print(history['2022-05-30']['data'])
-        saveHistory(history)
+        
+        
+        
+        
+        #time_energy_lookup = calcTempAndTimeImpactOnEnergy(history)
+        #calcTodayRemainingEnergyNeed(config, time_energy_lookup, history)
+        #updateHistory(config,2,history)
+        #print(history['2022-05-30']['data'])
+        #saveHistory(history)
 
         #hourlyAvg = calcAvgEnergyUsageByHour(history)
         #total = 0 

@@ -187,6 +187,11 @@ config=DataUtils.readConfig()
 
 teslaUserID=config['Credentials']['TeslaUserID']
 #print(isTeslaAtHome())
+
+energyForecastUpdated=0
+energyForecastTimeStamp=0
+
+TodayRemainingEnergyNeed=0
 while loop_counter<10:
 #while 1==0:
     try:
@@ -238,21 +243,24 @@ while loop_counter<10:
         currentHour = int(time.strftime("%H",time.localtime()))
         currentMin = int(time.strftime("%M",time.localtime()))
 
-        TodayRemainingEnergyNeed=0
-
+        
+        
         #if we transitioned to high anytime within the hour, then we assume the rest of the hour must be bouncing around high so we hold until the top of the next hour
 
         print("current Hour",currentHour," current min", currentMin)
         print("time to charge", time_to_charge, "hrs")
+        
         if lastHour!=currentHour:
             #we're here so we're at the top of the hour.. lets get latest forecasts and save it to history
             history = DataUtils.getHistory(config)
             time_energy_lookup = DataUtils.calcTempAndTimeImpactOnEnergy(history)
             TodayRemainingEnergyNeed=DataUtils.calcTodayRemainingEnergyNeed(config, time_energy_lookup, history)
+            energyForecastTimeStamp=datetime.datetime.now().timestamp()
             DataUtils.updateHistory(config,0,history)
             print(history[datetime.datetime.today().date().strftime('%Y-%m-%d')]['data'])
             DataUtils.saveHistory(history)
 
+        print("forecasted energy need", TodayRemainingEnergyNeed, "current battery SOC",energy_left)
 
 
         for i in jsonResponse:
@@ -300,7 +308,7 @@ while loop_counter<10:
             stopOpenEVSE()
             stopTesla()
         #if price is high and we do have solar coming in then we need to use battery we don't want to sell solar right now because net metering ain't working
-        elif latestPrice > highLowCutOff and solar_power>100 and (currentState!=2 and currentState!=0):
+        elif latestPrice > highLowCutOff and solar_power>100 and (currentState!=2 and currentState!=0) or energyForecastTimeStamp>energyForecastUpdated: 
             print("alert price is high... and we have solar... assumption is price is higher later in the day so we should use our solar and recharge not a always true assumption ",latestUTC,":",latestPrice)
             with teslapy.Tesla(teslaUserID) as tesla:
                 battery = tesla.battery_list()
@@ -325,11 +333,14 @@ while loop_counter<10:
 
                 #peak solar is around 10-11am... we should be making decision around this time
                 #we only go into autonomoous if we have enough battery to cover the day.. else we go into self
-
+                energyForecastUpdated=energyForecastTimeStamp
+                
                 if currentHour>9 and left>=TodayRemainingEnergyNeed:
+                    print( "we have enough battery to run through the day setting to autonomous",)
                     battery[0].set_operation('autonomous')
                 else:
-                    battery[0].set_operation('autonomous')
+                    print("we don't have enough battery to run through the end of the day so setting to self")
+                    battery[0].set_operation('self_consumption')
                 #we currently still don't reserve the battery... but we need to look at forecast price action later to determine if we should save battery now or use it... thats logic for another day
                 battery[0].set_backup_reserve_percent(1)
                 sticky_backup_reserve=1
