@@ -13,7 +13,7 @@ import datetime
 import configparser
 import geopy.distance
 import DataUtils
-
+import MondayUtil
 def getLowestFour():
     tomorrow=datetime.datetime.today()
     tomorrow+=datetime.timedelta(days=1)
@@ -257,9 +257,10 @@ while loop_counter<10:
             TodayRemainingEnergyNeed=DataUtils.calcTodayRemainingEnergyNeed(config, time_energy_lookup, history)
             energyForecastTimeStamp=datetime.datetime.now().timestamp()
             DataUtils.updateHistory(config,0,history)
-            print(history[datetime.datetime.today().date().strftime('%Y-%m-%d')]['data'])
+            print('updating history',history[datetime.datetime.today().date().strftime('%Y-%m-%d')]['data'])
             DataUtils.saveHistory(history)
-
+            MondayUtil.UpdateSyncToMonday(config,history[datetime.today().date().strftime('%Y-%m-%d')])
+            MondayUtil.UpdateSavingsChartingBaord(config,datetime.today().date().strftime('%Y-%m-%d'))
         print("forecasted energy need", TodayRemainingEnergyNeed, "current battery SOC",energy_left)
 
 
@@ -334,7 +335,7 @@ while loop_counter<10:
                 #peak solar is around 10-11am... we should be making decision around this time
                 #we only go into autonomoous if we have enough battery to cover the day.. else we go into self
                 energyForecastUpdated=energyForecastTimeStamp
-                
+
                 if currentHour>9 and left>=TodayRemainingEnergyNeed:
                     print( "we have enough battery to run through the day setting to autonomous",)
                     battery[0].set_operation('autonomous')
