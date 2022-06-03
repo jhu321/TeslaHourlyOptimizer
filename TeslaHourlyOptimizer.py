@@ -182,7 +182,7 @@ currentHour=-1
 comEd_URL="https://hourlypricing.comed.com/api?type=currenthouraverage"
 print(comEd_URL)
 
-config=DataUtils.readConfig()
+config=MondayUtil.initMonCli()
 #print(config)
 
 teslaUserID=config['Credentials']['TeslaUserID']
@@ -253,14 +253,15 @@ while loop_counter<10:
         if lastHour!=currentHour:
             #we're here so we're at the top of the hour.. lets get latest forecasts and save it to history
             history = DataUtils.getHistory(config)
+            DataUtils.popDataWithPricing(config,history[datetime.datetime.today().date().strftime('%Y-%m-%d')],True)
             time_energy_lookup = DataUtils.calcTempAndTimeImpactOnEnergy(history)
             TodayRemainingEnergyNeed=DataUtils.calcTodayRemainingEnergyNeed(config, time_energy_lookup, history)
             energyForecastTimeStamp=datetime.datetime.now().timestamp()
             DataUtils.updateHistory(config,0,history)
             print('updating history',history[datetime.datetime.today().date().strftime('%Y-%m-%d')]['data'])
             DataUtils.saveHistory(history)
-            MondayUtil.UpdateSyncToMonday(config,history[datetime.today().date().strftime('%Y-%m-%d')])
-            MondayUtil.UpdateSavingsChartingBaord(config,datetime.today().date().strftime('%Y-%m-%d'))
+            MondayUtil.UpdateSyncToMonday(config,history[datetime.datetime.today().date().strftime('%Y-%m-%d')])
+            MondayUtil.UpdateSavingsChartingBaord(config,datetime.datetime.today().date().strftime('%Y-%m-%d'))
         print("forecasted energy need", TodayRemainingEnergyNeed, "current battery SOC",energy_left)
 
 

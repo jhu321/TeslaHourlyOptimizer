@@ -69,13 +69,10 @@ def fullSyncToMonday(config, history):
 def UpdateSyncToMonday(config, history_day):
     #history=DataUtils.getHistory(config)
     board_id = config['Credentials']['Monday_Board_ID']
-    try:
-        board = client.get_board(id=board_id)
-    except:
-        print("couldn't get boards")
-
+    board = client.get_board(id=board_id)
     columns = board.get_columns('id','title')
     groups = board.get_groups('id','title')
+
     working_day = datetime.datetime.fromisoformat(history_day['date'])
     month=working_day.strftime('%Y-%m')
     #look for the month group
@@ -302,6 +299,6 @@ def PopSavingsChartingBaord(config):
 if __name__ == "__main__":
     config=initMonCli()
     #PopSavingsChartingBaord(config)
-    #history = DataUtils.getHistory(config)
-    #UpdateSyncToMonday(config,history['2022-06-01'])
-    UpdateSavingsChartingBaord(config,'2022-06-01')
+    history = DataUtils.getHistory(config)
+    UpdateSyncToMonday(config,history['2022-06-02'])
+    UpdateSavingsChartingBaord(config,'2022-06-02')
