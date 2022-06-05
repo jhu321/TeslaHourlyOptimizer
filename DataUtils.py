@@ -101,7 +101,7 @@ def getSiteTOUHistory(config, date, hourly_history):
                 hourly_history['hour'+str(d.hour)]['battery']+=(i['battery_power'])*(1/12)
                 hourly_history['hour'+str(d.hour)]['grid']+=(i['grid_power'])*(1/12)
                 hourly_history['hour'+str(d.hour)]['hour']=d.hour
-            #print(hourly_history)
+            print(hourly_history)
             #print(i)
             return hourly_history
             
@@ -176,7 +176,7 @@ def getWeather(config,dt):
         if (str(dt) not in w_hist and datetime.datetime.fromtimestamp(dt) < datetime.datetime.now()):
          #if (str(dt) not in w_hist):
             owm =config['Credentials']['OMW_key']
-            #print(owm)
+            print(owm)
             onecall_request = 'http://api.openweathermap.org/data/3.0/onecall/timemachine?lat=%s&lon=%s&dt=%s&appid=%s'
             owm_url = onecall_request % (config['Tesla_Cars']['home_lat'],config['Tesla_Cars']['home_long'],str(int(dt)),owm)
             print(owm_url)
@@ -246,7 +246,7 @@ def popDataWithBattPricing(date,data, history):
     #loop through and any hour where batt is negative we can assume that price
     current_date = datetime.datetime.fromisoformat(date)
     print("popDatawithBatt",current_date)
-    if(current_date.date()<=datetime.datetime.now().date()):
+    if(current_date.date()<datetime.datetime.now().date()):
         for i in data['data']:
             if data['data'][i]['battery'] < 0:
                 current_energy_value = getPreviousCharge(date,data['data'][i]['hour']-1, history ) * (data['data'][i]['battery soc']+data['data'][i]['battery'])
@@ -316,8 +316,8 @@ def popDataWithWeather(config, data):
                 0,
                 0,
                 0)
-            #print(working_date)
-            #print(working_date.timestamp())
+            print(working_date)
+            print(working_date.timestamp())
             weather = getWeather(config,int(working_date.timestamp()))
             if weather is not None:
                 data['data'][i]['temp']=kelvinToFahrenheit(weather['data'][0]['temp'])
@@ -343,7 +343,7 @@ def add_value(dict_obj, key, value):
         dict_obj[key] = [dict_obj[key], value]
 
 def average(lst):
-    #print(lst)
+    print(lst)
     if isinstance(lst, float):
         return lst
     return sum(lst) / len(lst)
@@ -387,7 +387,7 @@ def calcTempAndTimeImpactOnEnergy(history):
         
         #print(hourlyTempData[str(k)])
         for i in range(12):
-            #print(str(i*10))
+            print(str(i*10))
             if str(i*10) in hourlyTempData[str(k)]:
                 print(hourlyTempData[str(k)][str(i*10)])
                 work_temp[str(k)][str(i*10)]=average(hourlyTempData[str(k)][str(i*10)])
@@ -424,12 +424,12 @@ def saveHistory(history):
 
 def getForecast(config):
     owm =config['Credentials']['OMW_key']
-    #print(owm)
+    print(owm)
     onecall_request = 'http://api.openweathermap.org/data/3.0/onecall?lat=%s&lon=%s&appid=%s'
     owm_url = onecall_request % (config['Tesla_Cars']['home_lat'],config['Tesla_Cars']['home_long'],owm)
     print(owm_url)
     results = requests.get(owm_url)
-    #print(results.json())
+    print(results.json())
     return results.json()   
 
 def updateHistoryWithForecast(config, forecast, history):
@@ -441,8 +441,8 @@ def updateHistoryWithForecast(config, forecast, history):
         if dt.strftime('%Y-%m-%d') not in history:
             createHistory(config,dt,history)
         historyDayData = history[dt.strftime('%Y-%m-%d')]['data']
-        #print(dt)
-        #print(dt.hour)
+        print(dt)
+        print(dt.hour)
         historyDayData['hour'+str(dt.hour)]['forecasted temp']=kelvinToFahrenheit(i['temp'])
 
 
@@ -450,10 +450,10 @@ def getForecastTemps(forecast):
     results = {}
     for i in forecast:
         dt = datetime.datetime.fromtimestamp(i['dt'])
-        #print(dt)
-        #print(dt.hour)
+        print(dt)
+        print(dt.hour)
         results[str(dt.hour)]={'index': (int(kelvinToFahrenheit(i['temp'])/10)*10), 'temp':kelvinToFahrenheit(i['temp'])}
-    #print(results)
+    print(results)
     return results
 
 
@@ -461,13 +461,13 @@ def getForecastTemps(forecast):
 def calcTodayRemainingEnergyNeed(config,time_energy_lookup, history):
     forecast = getForecast(config)
     now = datetime.datetime.now()
-    #print(now.hour)
+    print(now.hour)
     forecast_temps= getForecastTemps(forecast['hourly'])
     updateHistoryWithForecast(config, forecast['hourly'],history)
     energy_needed = 0 
 #lets also update history with the forecasted energy needed
     historyDayData=history[now.strftime('%Y-%m-%d')]['data']
-    for i in range(now.hour,23):
+    for i in range(now.hour,24):
         #print(time_energy_lookup[str(i)])
         #print(forecast_temps[str(i)]['index'])
         #print(str(i)+ " hour needs "+str(time_energy_lookup[str(i)][str(forecast_temps[str(i)]['index'])]))
@@ -490,8 +490,8 @@ def historyToCSV(history):
     headers = [*rows[len(rows)-1]]
     headers.append('battery price')
 
-    #print (headers)
-    #print (rows[len(rows)-1])
+    print (headers)
+    print (rows[len(rows)-1])
 
     with open('test.csv','w') as csvfile:
         writer = csv.DictWriter(csvfile,fieldnames=headers)
