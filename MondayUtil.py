@@ -6,12 +6,73 @@ import pandas as pd
 import moncli
 import DataUtils
 import datetime
+import math
 
 def initMonCli():
     config=DataUtils.readConfig()
     moncli.api.api_key=config['Credentials']['Monday_API']
     moncli.api.connection_timeout = 60
     return config
+
+def NotificationLogToMonday(config, rate,battery,mode):
+    board_id = config['Credentials']['Monday_NotificationLog_ID']
+    try:
+        board = client.get_board(id=board_id)
+    except:
+        print('monday could not get board')
+ 
+    columns = board.get_columns('id','title')
+    column_values= { 'text':str(rate), 'text_1':str(battery), 'text_2':str(mode)}
+    item = board.add_item(item_name=datetime.datetime.now(), column_values=column_values)
+
+
+def initRunLog(timestamp, currentHour, currentMin, energy_left, time_to_charge, solar_power, battery_power, grid_power, load_power, lastAlert, min_index, min_value, currentHourPrice, current5min, currentState, battReserve, operation,TodayRemainingEnergyNeed):
+    runLog = {
+    'timestamp':timestamp, 
+    'currentHour':currentHour, 
+    'currentMin':currentMin, 
+    'energy_left':energy_left, 
+    'time_to_charge':time_to_charge,
+    'solar_power':solar_power, 
+    'battery_power':battery_power, 
+    'grid_power':grid_power, 
+    'load_power':load_power, 
+    'lastAlert':lastAlert, 
+    'min_index':min_index, 
+    'min_value':min_value, 
+    'currentHourPrice':currentHourPrice, 
+    'current5min':current5min, 
+    'currentState':currentState, 
+    'battReserve':battReserve, 
+    'operation':operation,
+    'TodayRemainingEnergyNeed':TodayRemainingEnergyNeed
+    }
+    return runLog
+
+def runLogToMonday(config, runLog):
+    board_id = config['Credentials']['Monday_RunLog_ID']
+    try:
+        board = client.get_board(id=board_id)
+    except:
+        print('monday could not get board')
+ 
+    columns = board.get_columns('id','title')
+    groups = board.get_groups('id','title')
+    #nuke existing
+    for i in groups:
+        if i.title =='Current':
+            group = i
+    #        i.delete()
+    column_name_to_id_hash = { }
+    for i in columns:
+        column_name_to_id_hash[i.title]=i.id
+
+    column_values = {}
+    for i in column_name_to_id_hash:
+        if i in runLog:
+            column_values[column_name_to_id_hash[i]]=runLog[i]
+    print (column_values)
+    item = group.add_item(item_name=runLog['timestamp'], column_values=column_values)
 
 
 
@@ -205,6 +266,8 @@ def UpdateSavingsChartingBaord(config,date):
         flat_no_solar=0
         flat_solar=0
         for item in items:
+            if item.column_values['actual_price'].value is None or item.column_values['grid'].value is None or item.column_values['total_energy'].value is None or item.column_values['battery'].value is None or item.column_values['battery_price'].value is None:
+                continue
             energy_cost += (item.column_values['grid'].value/1000) * (item.column_values['actual_price'].value/100 + 0.04032 + 0.00841+ 0.00091)
             flat_no_solar += (item.column_values['total_energy'].value/1000) * (0.07809 + 0.04032 + 0.00841+ 0.00091)
             flat_solar += (item.column_values['grid'].value/1000) * (0.07809 + 0.04032 + 0.00841+ 0.00091)
@@ -283,6 +346,8 @@ def PopSavingsChartingBaord(config):
         flat_no_solar=0
         flat_solar=0
         for item in items:
+            if item.column_values['actual_price'].value is None or item.column_values['grid'].value is None or item.column_values['total_energy'].value is None or item.column_values['battery'].value is None or item.column_values['battery_price'].value is None:
+                continue
             energy_cost += (item.column_values['grid'].value/1000) * (item.column_values['actual_price'].value/100 + 0.04032 + 0.00841+ 0.00091)
             flat_no_solar += (item.column_values['total_energy'].value/1000) * (0.07809 + 0.04032 + 0.00841+ 0.00091)
             flat_solar += (item.column_values['grid'].value/1000) * (0.07809 + 0.04032 + 0.00841+ 0.00091)
@@ -299,6 +364,9 @@ def PopSavingsChartingBaord(config):
 if __name__ == "__main__":
     config=initMonCli()
     #PopSavingsChartingBaord(config)
-    history = DataUtils.getHistory(config)
-    UpdateSyncToMonday(config,history['2022-06-02'])
-    UpdateSavingsChartingBaord(config,'2022-06-02')
+    #history = DataUtils.getHistory(config)
+    #UpdateSyncToMonday(config,history['2022-06-02'])
+    #UpdateSavingsChartingBaord(config,'2022-06-02')
+    #runLog=initRunLog(math.trunc(datetime.datetime.now().timestamp()),10,13,123,431,123,432,123,432,123,432,123,431,123,523,123,'asdkjs')
+    #runLogToMonday(config, runLog)
+    NotificationLogToMonday(config,'asdf','gfds','asdfasdf')

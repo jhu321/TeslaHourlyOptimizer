@@ -288,6 +288,8 @@ def popDataWithPricing(config,data, forceupdate):
     for i in data['data']:
         if data['data'][i]['actual price']==0 or pd.isna(data['data'][i]['actual price']):
             hour = data['data'][i]['hour']
+            if hour < 0:
+                continue                    
             data['data'][i]['actual price']=actual[hour]
             data['data'][i]['forecasted price']=forecast[hour]
 
@@ -308,6 +310,8 @@ def popDataWithWeather(config, data):
         if data['data'][i]['temp']==0 or date.date()==datetime.datetime.today().date():
             #we're here so temp is missing set the temp or its today
             hour = data['data'][i]['hour']
+            if hour < 0:
+                continue                    
             working_date = datetime.datetime(
                 date.year,
                 date.month,

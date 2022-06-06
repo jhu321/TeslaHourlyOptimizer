@@ -138,6 +138,12 @@ def sendMail(rate, battery, mode):
     if config['Email']['send_email_alert']!='1':
         return
 
+    if config['Email']['notification_type']=='Monday':
+        #logging to monday instead
+        MondayUtil.NotificationLogToMonday(config,rate,battery,mode)
+        return
+
+
     gmail_user = config['Email']['smtp_user']
     gmail_password = config['Email']['smtp_password']
 
@@ -178,7 +184,7 @@ hold_hour=-1
 currentHour=-1
 
 
-#comEd_URL="https://hourlypricing.comed.com/api?type=5minutefeed"
+comEd5Min_URL="https://hourlypricing.comed.com/api?type=5minutefeed"
 comEd_URL="https://hourlypricing.comed.com/api?type=currenthouraverage"
 print(comEd_URL)
 
@@ -207,12 +213,15 @@ while loop_counter<10:
         while results == 0:
             try:
                 results= requests.get(comEd_URL)
+                results5Min = requests.get(comEd5Min_URL)
             except:
                 print("comed choked sleeping for 30 seconds and trying again")
                 sleptTime+=30
                 time.sleep(30)
         jsonResponse=results.json()
+        jsonResponse5Min=results5Min.json()
         print("comed result: ",jsonResponse)
+        print("comed 5 min results:", jsonResponse5Min)
         #in case we slept more than 300 seconds we want to make sure we just pickup in the next 5 minute cycle
         sleptTime = sleptTime % 300    
 
@@ -271,10 +280,24 @@ while loop_counter<10:
             if int(millisUTC) > latestUTC:
                 latestUTC=int(millisUTC)
                 latestPrice=float(price)
+        
+        latest5MinUTC = 0
+        latest5MinPrice = 0.0
+        for i in jsonResponse5Min:
+            millisUTC=i['millisUTC']
+            fiveMinPrice=i['price']
+            if int(millisUTC) > latest5MinUTC:
+                latest5MinUTC=int(millisUTC)
+                latest5MinPrice=float(fiveMinPrice)
+
 
         if (currentHour not in min_index or latestPrice>stopBatteryCharge) and currentState==0 and latestPrice>min(lastalert,min_value):
             print("resetting currentState")
             currentState=-1
+        
+        runLog=MondayUtil.initRunLog(math.trunc(datetime.datetime.now().timestamp()),currentHour,currentMin,energy_left,time_to_charge,solar_power,battery_power,grid_power,load_power,lastalert,min(min_index),min_value,latestPrice,latest5MinPrice,currentState,-1,'unknown',TodayRemainingEnergyNeed)
+        MondayUtil.runLogToMonday(config,runLog)
+
     #battery if we are ever in negative pricing territory and its been that way for the first 15 min of the hour,  level is < 80% and we are betwee 2 and 5am charge regardless of price  1==0 never happens so we don't go into self state
         if (latestPrice<0 and currentMin>15 and currentState!=0) or (percent_charged < 80 and (currentHour in min_index or latestPrice<min(4,min_value)) and currentState!=0 and latestPrice <stopBatteryCharge):
                 print("alert transition to force charge ",latestUTC,":",latestPrice)
@@ -287,6 +310,8 @@ while loop_counter<10:
                     sendMail(latestPrice,battery[0].get_battery_data()['backup']['backup_reserve_percent'],'force self charging')
                 #payload = {"backup_reserve_percent": 100}
                 #requests.post(webhook_URL,json=payload)
+                runLog=MondayUtil.initRunLog(math.trunc(datetime.datetime.now().timestamp()),currentHour,currentMin,energy_left,time_to_charge,solar_power,battery_power,grid_power,load_power,lastalert,min(min_index),min_value,latestPrice,latest5MinPrice,currentState,100,'autonomous',TodayRemainingEnergyNeed)
+                MondayUtil.runLogToMonday(config,runLog)
                 lastalert=latestPrice
                 hold_hour=-1
                 currentState=0
@@ -307,6 +332,8 @@ while loop_counter<10:
             #requests.post(webhook_URL,json=payload)
             lastalert=latestPrice
             currentState=1
+            runLog=MondayUtil.initRunLog(math.trunc(datetime.datetime.now().timestamp()),currentHour,currentMin,energy_left,time_to_charge,solar_power,battery_power,grid_power,load_power,lastalert,min(min_index),min_value,latestPrice,latest5MinPrice,currentState,0,'self_consumption',TodayRemainingEnergyNeed)
+            MondayUtil.runLogToMonday(config,runLog)
             stopOpenEVSE()
             stopTesla()
         #if price is high and we do have solar coming in then we need to use battery we don't want to sell solar right now because net metering ain't working
@@ -336,12 +363,13 @@ while loop_counter<10:
                 #peak solar is around 10-11am... we should be making decision around this time
                 #we only go into autonomoous if we have enough battery to cover the day.. else we go into self
                 energyForecastUpdated=energyForecastTimeStamp
-
+                operation='autonomous'
                 if currentHour>9 and left>=TodayRemainingEnergyNeed:
                     print( "we have enough battery to run through the day setting to autonomous",)
                     battery[0].set_operation('autonomous')
                 else:
                     print("we don't have enough battery to run through the end of the day so setting to self")
+                    operation='self_consumption'
                     battery[0].set_operation('self_consumption')
                 #we currently still don't reserve the battery... but we need to look at forecast price action later to determine if we should save battery now or use it... thats logic for another day
                 battery[0].set_backup_reserve_percent(1)
@@ -364,6 +392,8 @@ while loop_counter<10:
             hold_hour=currentHour
             lastalert=latestPrice
             currentState=2
+            runLog=MondayUtil.initRunLog(math.trunc(datetime.datetime.now().timestamp()),currentHour,currentMin,energy_left,time_to_charge,solar_power,battery_power,grid_power,load_power,lastalert,min(min_index),min_value,latestPrice,latest5MinPrice,currentState,sticky_backup_reserve,operation,TodayRemainingEnergyNeed)
+            MondayUtil.runLogToMonday(config,runLog)
             stopOpenEVSE()
             stopTesla()
         ##if the current price is midlevel.. lower than high price but still too expensive to charge.  we want to take the power from the grid while preserving battery capacity we don't care for solar it can charge not charge it doesn't matter
@@ -399,6 +429,8 @@ while loop_counter<10:
                 #setting hold_hour to -1 so that it doesn't enforce a hold once we enter lower state
                 hold_hour=-1 
                 currentState=3
+                runLog=MondayUtil.initRunLog(math.trunc(datetime.datetime.now().timestamp()),currentHour,currentMin,energy_left,time_to_charge,solar_power,battery_power,grid_power,load_power,lastalert,min(min_index),min_value,latestPrice,latest5MinPrice,currentState,sticky_backup_reserve,'self_consumption',TodayRemainingEnergyNeed)
+                MondayUtil.runLogToMonday(config,runLog)
                 stopOpenEVSE()
                 stopTesla()
         #if the current price at the half hour mark is below batteryChargePrice then we want to take from grid
@@ -417,6 +449,8 @@ while loop_counter<10:
                 #setting hold_hour to -1 so that it doesn't enforce a hold once we enter lower state
                 hold_hour=-1
                 currentState=4
+                runLog=MondayUtil.initRunLog(math.trunc(datetime.datetime.now().timestamp()),currentHour,currentMin,energy_left,time_to_charge,solar_power,battery_power,grid_power,load_power,lastalert,min(min_index),min_value,latestPrice,latest5MinPrice,currentState,100,'self_consumption',TodayRemainingEnergyNeed)
+                MondayUtil.runLogToMonday(config,runLog)
                 startOpenEVSE()
                 startTesla()
         elif currentState==-1 or (currentState==4 and currentMin<=30):
@@ -434,10 +468,14 @@ while loop_counter<10:
                 #setting hold_hour to -1 so that it doesn't enforce a hold once we enter lower state
                 hold_hour=-1
                 currentState=5
+                runLog=MondayUtil.initRunLog(math.trunc(datetime.datetime.now().timestamp()),currentHour,currentMin,energy_left,time_to_charge,solar_power,battery_power,grid_power,load_power,lastalert,min(min_index),min_value,latestPrice,latest5MinPrice,currentState,20,'self_consumption',TodayRemainingEnergyNeed)
+                MondayUtil.runLogToMonday(config,runLog)
                 stopOpenEVSE()
                 stopTesla()
         else:
             print ("no change current state:",currentState," current price:",latestPrice, "lastAlert Price:", lastalert," hold hour:",hold_hour," current_hour",currentHour)
+            runLog=MondayUtil.initRunLog(math.trunc(datetime.datetime.now().timestamp()),currentHour,currentMin,energy_left,time_to_charge,solar_power,battery_power,grid_power,load_power,lastalert,min(min_index),min_value,latestPrice,latest5MinPrice,currentState,-1,'no_change',TodayRemainingEnergyNeed)
+            MondayUtil.runLogToMonday(config,runLog)
         
         currentMin = int(time.strftime("%M",time.localtime()))
         if currentMin % 5 != 0:
