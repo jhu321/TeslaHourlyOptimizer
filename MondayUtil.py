@@ -72,7 +72,7 @@ def runLogToMonday(config, runLog):
         if i in runLog:
             column_values[column_name_to_id_hash[i]]=runLog[i]
     print (column_values)
-    item = group.add_item(item_name=runLog['timestamp'], column_values=column_values)
+    item = group.add_item(item_name=datetime.datetime.fromtimestamp(runLog['timestamp']), column_values=column_values)
 
 
 
