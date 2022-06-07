@@ -246,7 +246,7 @@ def popDataWithBattPricing(date,data, history):
     #loop through and any hour where batt is negative we can assume that price
     current_date = datetime.datetime.fromisoformat(date)
     print("popDatawithBatt",current_date)
-    if(current_date.date()<datetime.datetime.now().date()):
+    if(current_date.date()<=datetime.datetime.now().date()):
         for i in data['data']:
             if data['data'][i]['battery'] < 0:
                 current_energy_value = getPreviousCharge(date,data['data'][i]['hour']-1, history ) * (data['data'][i]['battery soc']+data['data'][i]['battery'])
@@ -516,8 +516,8 @@ def getHistory(config):
             with open('history_file.json','w') as history_file:
                 json.dump(history,history_file)
         
+        calcBattsOC(history)
         for i in history:
-            calcBattsOC(history)
             popDataWithWeather(config,history[i])
             popDataWithPricing(config,history[i],False)
             popDataWithBattPricing(i,history[i],history)
@@ -556,12 +556,16 @@ if __name__ == "__main__":
         
         #save history
         history = getHistory(config)
-        updateHistory(config,2,history)
+        updateHistory(config,3,history)
 #        popDataWithPricing(config,history['2022-06-01'],True)
 #        popDataWithBattPricing('2022-06-01',history['2022-06-01'],history)
         time_energy_lookup = calcTempAndTimeImpactOnEnergy(history)
         calcTodayRemainingEnergyNeed(config, time_energy_lookup, history)
-        print(history['2022-06-01']['data'])
+        for i in history:
+            popDataWithWeather(config,history[i])
+            popDataWithPricing(config,history[i],True)
+            popDataWithBattPricing(i,history[i],history)
+        print(history['2022-06-06']['data'])
         saveHistory(history)
 
         #historyToCSV(history)
