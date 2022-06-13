@@ -132,3 +132,4 @@ dmypy.json
 cache.json
 config.txt
 *.json
+start.sh

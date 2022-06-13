@@ -214,8 +214,9 @@ while loop_counter<10:
             try:
                 results= requests.get(comEd_URL)
                 results5Min = requests.get(comEd5Min_URL)
-            except:
+            except Exception as e:
                 print("comed choked sleeping for 30 seconds and trying again")
+                print(e)
                 sleptTime+=30
                 time.sleep(30)
         jsonResponse=results.json()
