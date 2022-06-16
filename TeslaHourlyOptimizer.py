@@ -300,7 +300,7 @@ while loop_counter<10:
         MondayUtil.runLogToMonday(config,runLog)
 
     #battery if we are ever in negative pricing territory and its been that way for the first 15 min of the hour,  level is < 80% and we are betwee 2 and 5am charge regardless of price  1==0 never happens so we don't go into self state
-        if (latestPrice<0 and currentMin>15 and currentState!=0) or (percent_charged < 80 and (currentHour in min_index or latestPrice<min(4,min_value)) and currentState!=0 and latestPrice <stopBatteryCharge):
+        if (latestPrice<0 and currentMin>15 and currentState!=0) or (percent_charged < 99 and (currentHour in min_index or latestPrice<min(4,min_value)) and currentState!=0 and latestPrice <stopBatteryCharge):
                 print("alert transition to force charge ",latestUTC,":",latestPrice)
                 with teslapy.Tesla(teslaUserID) as tesla:
                     battery = tesla.battery_list()
