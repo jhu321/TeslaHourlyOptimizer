@@ -284,14 +284,57 @@ def popDataWithPricing(config,data, forceupdate):
     print(table_MN[0])
     forecast = table_MN[0]['forecast']
     actual = table_MN[0]['actual']
+ #   print(actual)
+    
+    #actual.pop(0)
+    #forecast.pop(0)
+    
+
+   # print(actual)
+
+    newActual=[]
+    newForecast=[]
+# we need to fix the data because its hour ending and not hour beginning
+    for i in range(len(actual)):
+        print(i,i+1)
+        if i+1<len(actual):
+            newActual.append(actual[i+1])
+            newForecast.append(forecast[i+1])
+
+#default to same as hour ending 11pm
+    newActual.append(actual[23].copy())
+    newForecast.append(forecast[23].copy())
+ 
+#    asdfasdfasdf
+
+# now we need to fix hour ending midnight
+    d = datetime.timedelta(days = 1)
+    tomorrow = date +d
+    URL='https://hourlypricing.comed.com/rrtp/ServletFeed?type=pricingtabledual&date='+date.strftime('%Y%m%d')
+    page=requests.get(URL)
+    # first try tomorrow to see if we have data... if we do then use tomorrow.. else today
+    if(len(page.text) >5):
+        tab='<table><tr><td>time</td><td>forecast</td><td>actual</td></tr>'+page.text+'</table>'
+        tab=tab.replace("&cent;","")
+        #print(tab)
+        table_MN = pd.read_html(tab,header=0)
+     #   print(table_MN[0])
+        forecast = table_MN[0]['forecast']
+        actual = table_MN[0]['actual']
+        newActual[23]=actual[0]
+        newForecast[23]=forecast[0]
+
+    #print(newActual)
+
     
     for i in data['data']:
-        if data['data'][i]['actual price']==0 or pd.isna(data['data'][i]['actual price']):
+        if data['data'][i]['actual price']==0 or pd.isna(data['data'][i]['actual price']) or forceupdate==True:
             hour = data['data'][i]['hour']
             if hour < 0:
                 continue                    
-            data['data'][i]['actual price']=actual[hour]
-            data['data'][i]['forecasted price']=forecast[hour]
+            data['data'][i]['actual price']=newActual[hour]
+            print(i,newActual[hour], hour)
+            data['data'][i]['forecasted price']=newForecast[hour]
 
 
 
@@ -561,12 +604,14 @@ if __name__ == "__main__":
 #        popDataWithBattPricing('2022-06-01',history['2022-06-01'],history)
         time_energy_lookup = calcTempAndTimeImpactOnEnergy(history)
         calcTodayRemainingEnergyNeed(config, time_energy_lookup, history)
-        for i in history:
-            popDataWithWeather(config,history[i])
-            popDataWithPricing(config,history[i],True)
-            popDataWithBattPricing(i,history[i],history)
-        print(history['2022-06-06']['data'])
-        saveHistory(history)
+        #for i in history:
+        #    popDataWithWeather(config,history[i])
+        #    popDataWithPricing(config,history[i],True)
+        #    popDataWithBattPricing(i,history[i],history)
+        
+        #popDataWithPricing(config,history['2022-06-13'],True)
+        #print(history['2022-06-13']['data'])
+        #saveHistory(history)
 
         #historyToCSV(history)
 
