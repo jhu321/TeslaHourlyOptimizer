@@ -272,7 +272,7 @@ def popDataWithPricing(config,data, forceupdate):
         return 
     
     URL='https://hourlypricing.comed.com/rrtp/ServletFeed?type=pricingtabledual&date='+date.strftime('%Y%m%d')
-    page=requests.get(URL)
+    page=requests.get(URL,verify=False)
     # first try tomorrow to see if we have data... if we do then use tomorrow.. else today
     if(len(page.text) <=5):
         #we're here so we must not have any data... return

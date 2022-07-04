@@ -20,11 +20,11 @@ def getLowestFour():
     today=datetime.datetime.today().strftime('%Y%m%d')
     tomorrow=tomorrow.strftime('%Y%m%d')
     URL='https://hourlypricing.comed.com/rrtp/ServletFeed?type=pricingtabledual&date='+tomorrow
-    page=requests.get(URL)
+    page=requests.get(URL,verify=False)
     # first try tomorrow to see if we have data... if we do then use tomorrow.. else today
     if(len(page.text) <=5):
         URL='https://hourlypricing.comed.com/rrtp/ServletFeed?type=pricingtabledual&date='+today
-        page=requests.get(URL)
+        page=requests.get(URL,verify=False)
     tab='<table><tr><td>time</td><td>forecast</td><td>actual</td></tr>'+page.text+'</table>'
     tab=tab.replace("&cent;","")
     #print(tab)
@@ -212,8 +212,8 @@ while loop_counter<10:
         #try to get comed results... if comed service is down.. keep waiting 
         while results == 0:
             try:
-                results= requests.get(comEd_URL)
-                results5Min = requests.get(comEd5Min_URL)
+                results= requests.get(comEd_URL,verify=False)
+                results5Min = requests.get(comEd5Min_URL,verify=False)
             except Exception as e:
                 print("comed choked sleeping for 30 seconds and trying again")
                 print(e)
