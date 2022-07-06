@@ -599,7 +599,7 @@ if __name__ == "__main__":
         
         #save history
         history = getHistory(config)
-        updateHistory(config,3,history)
+        updateHistory(config,4,history)
 #        popDataWithPricing(config,history['2022-06-01'],True)
 #        popDataWithBattPricing('2022-06-01',history['2022-06-01'],history)
         time_energy_lookup = calcTempAndTimeImpactOnEnergy(history)
@@ -623,12 +623,15 @@ if __name__ == "__main__":
         time_energy_lookup = calcTempAndTimeImpactOnEnergy(history)
         #calcTodayRemainingEnergyNeed(config, time_energy_lookup, history)
         #updateHistory(config,2,history)
-        #popDataWithPricing(config,history['2022-05-31'],True)
+        popDataWithPricing(config,history['2022-07-01'],True)
+        popDataWithPricing(config,history['2022-07-02'],True)
+        popDataWithPricing(config,history['2022-07-03'],True)
+        popDataWithPricing(config,history['2022-07-04'],True)
  #       popDataWithBattPricing('2022-05-02',history['2022-05-02'],history)
 
 
         #print(history['2022-05-02']['data'])
-        #saveHistory(history)
+        saveHistory(history)
 
         #hourlyAvg = calcAvgEnergyUsageByHour(history)
         #total = 0 
