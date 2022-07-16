@@ -266,17 +266,10 @@ def UpdateSavingsChartingBaord(config,date):
         full_cost=0
         flat_no_solar=0
         flat_solar=0
-        for item in items:
-            maxSleep=3
-            sleepCounter=0
-            while sleepCounter<maxSleep and (item.column_values['Tax and Fees'].value is None or item.column_values['Comed Fixed'].value is None): 
-                print("tax and fees are null waiting for automation to finish... sleeping", sleepCounter)
-                sleepCounter=sleepCounter+1
-                time.sleep(30)
-
+        
 
         for item in items:
-            if item.column_values['actual_price'].value is None or item.column_values['grid'].value is None or item.column_values['total_energy'].value is None or item.column_values['battery'].value is None or item.column_values['battery_price'].value is None or item.column_values['Tax and Fees'].value is None or item.column_values['Comed Fixed'].value:
+            if item.column_values['actual_price'].value is None or item.column_values['grid'].value is None or item.column_values['total_energy'].value is None or item.column_values['battery'].value is None or item.column_values['battery_price'].value is None or item.column_values['Tax and Fees'].value is None or item.column_values['Comed Fixed'].value is None:
                 continue
             energy_cost += (item.column_values['grid'].value/1000) * (item.column_values['actual_price'].value/100 + item.column_values['Tax and Fees'].value)
             flat_no_solar += (item.column_values['total_energy'].value/1000) * (item.column_values['Comed Fixed'].value + item.column_values['Tax and Fees'].value)
