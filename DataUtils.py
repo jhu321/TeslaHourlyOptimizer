@@ -26,7 +26,7 @@ def readConfig():
 def initHourlyHistory():
     hourly_history={}
     for k in range(24):
-        hourly_history['hour'+str(k)]={'hour':-1,'energy':0,'solar':0 ,'grid':0,'battery':0, 'temp':0,'forecasted energy':0, 'forecasted temp':0, 'actual price':0,'forecasted price':0}
+        hourly_history['hour'+str(k)]={'hour':-1,'energy':0,'solar':0 ,'grid':0,'battery':0, 'temp':0,'forecasted energy':0, 'forecasted temp':0, 'actual price':0,'forecasted price':0,'Tax and Fees':0.01783, 'Comed Fixed':0.11041}
     return hourly_history
 
 
@@ -332,9 +332,15 @@ def popDataWithPricing(config,data, forceupdate):
             hour = data['data'][i]['hour']
             if hour < 0:
                 continue                    
-            data['data'][i]['actual price']=newActual[hour]
+            if np.isnan(newActual[hour])==False and newActual[hour] is not None:
+                print("asdfjkhasdf", newActual[hour])
+                data['data'][i]['actual price']=newActual[hour] 
+            else:
+                data['data'][i]['actual price']=newForecast[hour]
             print(i,newActual[hour], hour)
             data['data'][i]['forecasted price']=newForecast[hour]
+            data['data'][i]['Tax and Fees']=0.01783
+            data['data'][i]['Comed Fixed']=0.11041
 
 
 
@@ -547,8 +553,16 @@ def historyToCSV(history):
 
     
 
-
-
+def deleteHistory(config, day_to_delete):
+        try:
+            with open('history_file.json','r') as history_file:
+                history = json.load(history_file)
+        except FileNotFoundError:
+            history = generateHistory(config,30)
+            with open('history_file.json','w') as history_file:
+                json.dump(history,history_file)
+        print(history.pop(day_to_delete))
+        return history
 
 def getHistory(config):
         try:
@@ -598,20 +612,22 @@ if __name__ == "__main__":
 
         
         #save history
+        #history = deleteHistory(config,'2022-07-16')
+        #saveHistory(history)
         history = getHistory(config)
-        updateHistory(config,4,history)
+        updateHistory(config,2,history)
 #        popDataWithPricing(config,history['2022-06-01'],True)
 #        popDataWithBattPricing('2022-06-01',history['2022-06-01'],history)
-        time_energy_lookup = calcTempAndTimeImpactOnEnergy(history)
-        calcTodayRemainingEnergyNeed(config, time_energy_lookup, history)
+        #time_energy_lookup = calcTempAndTimeImpactOnEnergy(history)
+        #calcTodayRemainingEnergyNeed(config, time_energy_lookup, history)
         #for i in history:
         #    popDataWithWeather(config,history[i])
         #    popDataWithPricing(config,history[i],True)
         #    popDataWithBattPricing(i,history[i],history)
         
-        #popDataWithPricing(config,history['2022-06-13'],True)
+        popDataWithPricing(config,history['2022-07-16'],True)
         #print(history['2022-06-13']['data'])
-        #saveHistory(history)
+        saveHistory(history)
 
         #historyToCSV(history)
 
@@ -620,18 +636,18 @@ if __name__ == "__main__":
 
         
         
-        time_energy_lookup = calcTempAndTimeImpactOnEnergy(history)
+        #time_energy_lookup = calcTempAndTimeImpactOnEnergy(history)
         #calcTodayRemainingEnergyNeed(config, time_energy_lookup, history)
         #updateHistory(config,2,history)
-        popDataWithPricing(config,history['2022-07-01'],True)
-        popDataWithPricing(config,history['2022-07-02'],True)
-        popDataWithPricing(config,history['2022-07-03'],True)
-        popDataWithPricing(config,history['2022-07-04'],True)
+        #popDataWithPricing(config,history['2022-07-01'],True)
+        #popDataWithPricing(config,history['2022-07-02'],True)
+        #popDataWithPricing(config,history['2022-07-03'],True)
+        #popDataWithPricing(config,history['2022-07-16'],True)
  #       popDataWithBattPricing('2022-05-02',history['2022-05-02'],history)
 
 
         #print(history['2022-05-02']['data'])
-        saveHistory(history)
+        #saveHistory(history)
 
         #hourlyAvg = calcAvgEnergyUsageByHour(history)
         #total = 0 

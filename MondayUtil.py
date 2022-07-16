@@ -7,6 +7,7 @@ import moncli
 import DataUtils
 import datetime
 import math
+import time
 
 def initMonCli():
     config=DataUtils.readConfig()
@@ -89,7 +90,7 @@ def fullSyncToMonday(config, history):
     for i in groups:
         if i.title !='Group Title':
             i.delete()
-    history_column_map= {'Hour':'hour', 'total_energy':'energy','solar':'solar','grid':'grid','battery':'battery','temp':'temp','forecast_temp':'forecasted temp','forecasted_energy':'forecasted energy','actual_price':'actual price','forecasted_price':'forecasted price','battery_price':'battery price','Battery SOC':'battery soc'}
+    history_column_map= {'Hour':'hour', 'total_energy':'energy','solar':'solar','grid':'grid','battery':'battery','temp':'temp','forecast_temp':'forecasted temp','forecasted_energy':'forecasted energy','actual_price':'actual price','forecasted_price':'forecasted price','battery_price':'battery price','Battery SOC':'battery soc','Tax and Fees':'Tax and Fees','Comed Fixed':'Comed Fixed'}
     column_name_to_id_hash = { }
     date = '2022-05-30'
     for i in columns:
@@ -144,7 +145,7 @@ def UpdateSyncToMonday(config, history_day):
     if group is None:
          group = board.add_group(month, 'id')
     
-    history_column_map= {'Hour':'hour', 'total_energy':'energy','solar':'solar','grid':'grid','battery':'battery','temp':'temp','forecast_temp':'forecasted temp','forecasted_energy':'forecasted energy','actual_price':'actual price','forecasted_price':'forecasted price','battery_price':'battery price','Battery SOC':'battery soc'}
+    history_column_map= {'Hour':'hour', 'total_energy':'energy','solar':'solar','grid':'grid','battery':'battery','temp':'temp','forecast_temp':'forecasted temp','forecasted_energy':'forecasted energy','actual_price':'actual price','forecasted_price':'forecasted price','battery_price':'battery price','Battery SOC':'battery soc','Tax and Fees':'Tax and Fees','Comed Fixed':'Comed Fixed'}
     column_name_to_id_hash = { }
     
     for i in columns:
@@ -268,10 +269,10 @@ def UpdateSavingsChartingBaord(config,date):
         for item in items:
             maxSleep=3
             sleepCounter=0
-            while sleepCounter<maxSleep and (item.column_values['Tax and Fees'].value is None or item.column_values['Comed Fixed'].value): 
+            while sleepCounter<maxSleep and (item.column_values['Tax and Fees'].value is None or item.column_values['Comed Fixed'].value is None): 
                 print("tax and fees are null waiting for automation to finish... sleeping", sleepCounter)
                 sleepCounter=sleepCounter+1
-                datetime.time.sleep(30)
+                time.sleep(30)
 
 
         for item in items:
