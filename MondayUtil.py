@@ -11,7 +11,7 @@ import math
 def initMonCli():
     config=DataUtils.readConfig()
     moncli.api.api_key=config['Credentials']['Monday_API']
-    moncli.api.connection_timeout = 60
+    moncli.api.connection_timeout = 300
     return config
 
 def NotificationLogToMonday(config, rate,battery,mode):
@@ -266,11 +266,20 @@ def UpdateSavingsChartingBaord(config,date):
         flat_no_solar=0
         flat_solar=0
         for item in items:
-            if item.column_values['actual_price'].value is None or item.column_values['grid'].value is None or item.column_values['total_energy'].value is None or item.column_values['battery'].value is None or item.column_values['battery_price'].value is None:
+            maxSleep=3
+            sleepCounter=0
+            while sleepCounter<maxSleep and (item.column_values['Tax and Fees'].value is None or item.column_values['Comed Fixed'].value): 
+                print("tax and fees are null waiting for automation to finish... sleeping", sleepCounter)
+                sleepCounter=sleepCounter+1
+                datetime.time.sleep(30)
+
+
+        for item in items:
+            if item.column_values['actual_price'].value is None or item.column_values['grid'].value is None or item.column_values['total_energy'].value is None or item.column_values['battery'].value is None or item.column_values['battery_price'].value is None or item.column_values['Tax and Fees'].value is None or item.column_values['Comed Fixed'].value:
                 continue
-            energy_cost += (item.column_values['grid'].value/1000) * (item.column_values['actual_price'].value/100 + 0.04032 + 0.00841+ 0.00091)
-            flat_no_solar += (item.column_values['total_energy'].value/1000) * (0.07809 + 0.04032 + 0.00841+ 0.00091)
-            flat_solar += (item.column_values['grid'].value/1000) * (0.07809 + 0.04032 + 0.00841+ 0.00091)
+            energy_cost += (item.column_values['grid'].value/1000) * (item.column_values['actual_price'].value/100 + item.column_values['Tax and Fees'].value)
+            flat_no_solar += (item.column_values['total_energy'].value/1000) * (item.column_values['Comed Fixed'].value + item.column_values['Tax and Fees'].value)
+            flat_solar += (item.column_values['grid'].value/1000) * (item.column_values['Comed Fixed'].value + item.column_values['Tax and Fees'].value)
             battery_savings += (((item.column_values['grid'].value+item.column_values['battery'].value)/1000) * (item.column_values['actual_price'].value/100)) - (((item.column_values['grid'].value/1000) * (item.column_values['actual_price'].value/100)) + ((item.column_values['battery'].value/1000) * (item.column_values['battery_price'].value/100)))
         print(energy_cost,flat_solar,flat_no_solar,battery_savings)
         addSavingsChartEntry(group, "Solar Savings",flat_no_solar-flat_solar,start_date_dt.strftime('%Y-%m-%d'),column_name_to_id_hash)
@@ -348,9 +357,9 @@ def PopSavingsChartingBaord(config):
         for item in items:
             if item.column_values['actual_price'].value is None or item.column_values['grid'].value is None or item.column_values['total_energy'].value is None or item.column_values['battery'].value is None or item.column_values['battery_price'].value is None:
                 continue
-            energy_cost += (item.column_values['grid'].value/1000) * (item.column_values['actual_price'].value/100 + 0.04032 + 0.00841+ 0.00091)
-            flat_no_solar += (item.column_values['total_energy'].value/1000) * (0.07809 + 0.04032 + 0.00841+ 0.00091)
-            flat_solar += (item.column_values['grid'].value/1000) * (0.07809 + 0.04032 + 0.00841+ 0.00091)
+            energy_cost += (item.column_values['grid'].value/1000) * (item.column_values['actual_price'].value/100 + item.column_values['Tax and Fees'].value)
+            flat_no_solar += (item.column_values['total_energy'].value/1000) * (item.column_values['Comed Fixed'].value + item.column_values['Tax and Fees'].value)
+            flat_solar += (item.column_values['grid'].value/1000) * (item.column_values['Comed Fixed'].value + item.column_values['Tax and Fees'].value)
             battery_savings += (((item.column_values['grid'].value+item.column_values['battery'].value)/1000) * (item.column_values['actual_price'].value/100)) - (((item.column_values['grid'].value/1000) * (item.column_values['actual_price'].value/100)) + ((item.column_values['battery'].value/1000) * (item.column_values['battery_price'].value/100)))
         print(energy_cost,flat_solar,flat_no_solar,battery_savings)
         addSavingsChartEntry(group, "Solar Savings",flat_no_solar-flat_solar,start_date_dt.strftime('%Y-%m-%d'),column_name_to_id_hash)
@@ -363,8 +372,8 @@ def PopSavingsChartingBaord(config):
 
 if __name__ == "__main__":
     config=initMonCli()
-    #PopSavingsChartingBaord(config)
-    history = DataUtils.getHistory(config)
+    #history = DataUtils.getHistory(config)
+    PopSavingsChartingBaord(config)
     #UpdateSyncToMonday(config,history['2022-06-05'])
     #UpdateSavingsChartingBaord(config,'2022-06-05')
 
@@ -372,14 +381,7 @@ if __name__ == "__main__":
     #DataUtils.popDataWithPricing(config,history['2022-06-15'],True)
     #DataUtils.popDataWithPricing(config,history['2022-06-16'],True)
     #DataUtils.saveHistory(history)
-    UpdateSyncToMonday(config,history['2022-07-01'])
-    UpdateSavingsChartingBaord(config,'2022-07-01')
-    UpdateSyncToMonday(config,history['2022-07-02'])
-    UpdateSavingsChartingBaord(config,'2022-07-02')
-    UpdateSyncToMonday(config,history['2022-07-03'])
-    UpdateSavingsChartingBaord(config,'2022-07-03')
-    UpdateSyncToMonday(config,history['2022-07-04'])
-    UpdateSavingsChartingBaord(config,'2022-07-04')
+    #UpdateSavingsChartingBaord(config,'2022-07-05')
     #runLog=initRunLog(math.trunc(datetime.datetime.now().timestamp()),10,13,123,431,123,432,123,432,123,432,123,431,123,523,123,'asdkjs')
     #runLogToMonday(config, runLog)
     #NotificationLogToMonday(config,'asdf','gfds','asdfasdf')
