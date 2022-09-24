@@ -338,7 +338,7 @@ while loop_counter<10:
             stopOpenEVSE()
             stopTesla()
         #if price is high and we do have solar coming in then we need to use battery we don't want to sell solar right now because net metering ain't working
-        elif latestPrice > highLowCutOff and solar_power>100 and (currentState!=2 and currentState!=0) or energyForecastTimeStamp>energyForecastUpdated: 
+        elif latestPrice > highLowCutOff and solar_power>100 and ((currentState!=2 and currentState!=0) or energyForecastTimeStamp>energyForecastUpdated): 
             print("alert price is high... and we have solar... assumption is price is higher later in the day so we should use our solar and recharge not a always true assumption ",latestUTC,":",latestPrice)
             with teslapy.Tesla(teslaUserID) as tesla:
                 battery = tesla.battery_list()
