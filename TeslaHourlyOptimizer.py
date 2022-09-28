@@ -83,14 +83,19 @@ def isTeslaAtHome():
         #print(home_lat," ",home_long)
         with teslapy.Tesla(teslaUserID) as tesla:
             vehicles = tesla.vehicle_list()
+            print(vehicles[0].get_latest_vehicle_data())
+
+            #print(vehicles[0].get_latest_vehicle_data()['legacy']['drive_state'])
             #if gps data is old then sync and wake up
-            if (datetime.datetime.now()-datetime.datetime.fromtimestamp(vehicles[0].get_vehicle_data()['drive_state']['gps_as_of'])).total_seconds() > 60*60*3:
+            if (datetime.datetime.now()-datetime.datetime.fromtimestamp(vehicles[0].get_latest_vehicle_data()['legacy']['drive_state']['gps_as_of'])).total_seconds() > 60*60*3:
                 vehicles[0].sync_wake_up()
-            car_lat = float(vehicles[0].get_vehicle_data()['drive_state']['latitude'])
-            car_long = float(vehicles[0].get_vehicle_data()['drive_state']['longitude'])
+
+            
+            car_lat = float(vehicles[0].get_vehicle_data()['legacy']['drive_state']['latitude'])
+            car_long = float(vehicles[0].get_vehicle_data()['legacy']['drive_state']['longitude'])
             car = (car_lat, car_long)
-            #print(car)
-            #print(geopy.distance.geodesic(home,car).m)
+            print(car)
+            print(geopy.distance.geodesic(home,car).m)
             if geopy.distance.geodesic(home,car).m < 50:
                 return True
         return False
@@ -109,7 +114,7 @@ def startTesla():
         with teslapy.Tesla(teslaUserID) as tesla:
             vehicles = tesla.vehicle_list()
             print("checking connection")
-            if vehicles[0].get_vehicle_data()['charge_state']['charging_state'] not in ['Charging','Complete','Disconnected']:
+            if vehicles[0].get_vehicle_data()['legacy']['charge_state']['charging_state'] not in ['Charging','Complete','Disconnected']:
                 print("connected")
                 vehicles[0].sync_wake_up()
                 vehicles[0].command('START_CHARGE')
@@ -127,7 +132,7 @@ def stopTesla():
         with teslapy.Tesla(teslaUserID) as tesla:
             vehicles = tesla.vehicle_list()
             print("checking charging state")
-            if vehicles[0].get_vehicle_data()['charge_state']['charging_state'] in ['Charging']:
+            if vehicles[0].get_vehicle_data()['legacy']['charge_state']['charging_state'] in ['Charging']:
                 print("currently charging stop it")
                 vehicles[0].sync_wake_up()
                 vehicles[0].command('STOP_CHARGE')
@@ -198,6 +203,9 @@ energyForecastUpdated=0
 energyForecastTimeStamp=0
 
 TodayRemainingEnergyNeed=0
+
+
+
 while loop_counter<10:
 #while 1==0:
     try:
