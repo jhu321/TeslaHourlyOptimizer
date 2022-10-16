@@ -19,6 +19,10 @@ def getLowestFour():
     tomorrow+=datetime.timedelta(days=1)
     today=datetime.datetime.today().strftime('%Y%m%d')
     tomorrow=tomorrow.strftime('%Y%m%d')
+    currentHour = int(time.strftime("%H",time.localtime()))
+    #we should only be interested in tomorrow if time is after 8pm
+    if (currentHour<=20):
+        tomorrow=today;
     URL='https://hourlypricing.comed.com/rrtp/ServletFeed?type=pricingtabledual&date='+tomorrow
     page=requests.get(URL,verify=False)
     # first try tomorrow to see if we have data... if we do then use tomorrow.. else today
