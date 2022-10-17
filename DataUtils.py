@@ -615,7 +615,14 @@ if __name__ == "__main__":
         #history = deleteHistory(config,'2022-07-16')
         #saveHistory(history)
         history = getHistory(config)
-        updateHistory(config,2,history)
+            
+        for i in history:
+            history_day=datetime.datetime.strptime(i,'%Y-%m-%d')
+            today=datetime.datetime.today()
+            today+=datetime.timedelta(days=-15)
+            if (history_day>today):
+                print(history_day)
+        #updateHistory(config,2,history)
 #        popDataWithPricing(config,history['2022-06-01'],True)
 #        popDataWithBattPricing('2022-06-01',history['2022-06-01'],history)
         #time_energy_lookup = calcTempAndTimeImpactOnEnergy(history)
@@ -625,9 +632,9 @@ if __name__ == "__main__":
         #    popDataWithPricing(config,history[i],True)
         #    popDataWithBattPricing(i,history[i],history)
         
-        popDataWithPricing(config,history['2022-07-16'],True)
+        #popDataWithPricing(config,history['2022-07-16'],True)
         #print(history['2022-06-13']['data'])
-        saveHistory(history)
+        #saveHistory(history)
 
         #historyToCSV(history)
 
