@@ -23,6 +23,8 @@ def getLowestFour():
     #we should only be interested in tomorrow if time is after 8pm
     if (currentHour<=20):
         tomorrow=today
+    print('right now is ',today, currentHour)
+    print('getting forecast price based on',tomorrow)
     URL='https://hourlypricing.comed.com/rrtp/ServletFeed?type=pricingtabledual&date='+tomorrow
     page=requests.get(URL,verify=False)
     # first try tomorrow to see if we have data... if we do then use tomorrow.. else today
@@ -207,7 +209,8 @@ energyForecastUpdated=0
 energyForecastTimeStamp=0
 
 TodayRemainingEnergyNeed=0
-
+min_index, min_value=getLowestFour()
+print(min_index, min_value) 
 
 
 while loop_counter<10:
