@@ -134,7 +134,7 @@ def UpdateSyncToMonday(config, history_day):
     board = client.get_board(id=board_id)
     columns = board.get_columns('id','title')
     groups = board.get_groups('id','title')
-
+    
     working_day = datetime.datetime.fromisoformat(history_day['date'])
     month=working_day.strftime('%Y-%m')
     #look for the month group
@@ -160,6 +160,9 @@ def UpdateSyncToMonday(config, history_day):
 
     #delete the day
     if working_day.strftime('%Y-%m-%d') in names:
+        if (type(names[working_day.strftime('%Y-%m-%d')])==moncli.entities.item.Item):
+            names[working_day.strftime('%Y-%m-%d')]=[names[working_day.strftime('%Y-%m-%d')]]
+        print(type(names[working_day.strftime('%Y-%m-%d')]))
         for i in names[working_day.strftime('%Y-%m-%d')]:
             i.delete()
 
@@ -171,13 +174,14 @@ def UpdateSyncToMonday(config, history_day):
                 if not pd.isna(history_day['data'][hour][history_column_map[i]]) and history_day['data'][hour][history_column_map[i]] is not None and history_day['data'][hour][history_column_map[i]] != 'NaN': 
                     column_values[column_name_to_id_hash[i]] = history_day['data'][hour][history_column_map[i]]
         print (column_values)
-        date = datetime.datetime.fromisoformat(history_day['date'])
-        date = date.replace(hour=history_day['data'][hour]['hour'])
-        print(date)
-        item = group.add_item(item_name=date, column_values=column_values)
-        date_value = item.column_values['date4']
-        date_value.value = date
-        item = item.change_column_value(column_value=date_value)
+        if history_day['data'][hour]['hour']<24 and history_day['data'][hour]['hour']>=0:
+            date = datetime.datetime.fromisoformat(history_day['date'])
+            date = date.replace(hour=history_day['data'][hour]['hour'])
+            print(date)
+            item = group.add_item(item_name=date, column_values=column_values)
+            date_value = item.column_values['date4']
+            date_value.value = date
+            item = item.change_column_value(column_value=date_value)
 
 
 def addSavingsChartEntry(group,type,amount,date,column_name_to_id_hash):
@@ -220,6 +224,9 @@ def UpdateSavingsChartingBaord(config,date):
 
     #delete the day
     if working_day.strftime('%Y-%m-%d') in names:
+        if (type(names[working_day.strftime('%Y-%m-%d')])==moncli.entities.item.Item):
+            names[working_day.strftime('%Y-%m-%d')]=[names[working_day.strftime('%Y-%m-%d')]]
+        print(type(names[working_day.strftime('%Y-%m-%d')]))
         for i in names[working_day.strftime('%Y-%m-%d')]:
             i.delete()
 
@@ -243,43 +250,44 @@ def UpdateSavingsChartingBaord(config,date):
     
 
     while start_date_dt<=end_date_dt:
-        print(names[start_date_dt.strftime('%Y-%m-%d')])
-        #get the items and columns
-        items = client.get_items(ids=names[start_date_dt.strftime('%Y-%m-%d')], get_column_values=True)
-        #print(items)
+        if start_date_dt.strftime('%Y-%m-%d') in names.keys():
+            print(names[start_date_dt.strftime('%Y-%m-%d')])
+            #get the items and columns
+            items = client.get_items(ids=names[start_date_dt.strftime('%Y-%m-%d')], get_column_values=True)
+            #print(items)
 
-        current_month=start_date_dt.strftime('%Y-%m')
+            current_month=start_date_dt.strftime('%Y-%m')
 
-        if group is None or current_month!=group.title:
-            groups = target_board.get_groups('id','title')
-            group = None
-            for i in groups:
-                if i.title == current_month:
-                    group = i
-            if group == None:
-                group = target_board.add_group(current_month, 'id')
+            if group is None or current_month!=group.title:
+                groups = target_board.get_groups('id','title')
+                group = None
+                for i in groups:
+                    if i.title == current_month:
+                        group = i
+                if group == None:
+                    group = target_board.add_group(current_month, 'id')
 
-        energy_cost=0
-        solar_savings=0
-        battery_savings=0
-        tou_savings=0
-        full_cost=0
-        flat_no_solar=0
-        flat_solar=0
-        
+            energy_cost=0
+            solar_savings=0
+            battery_savings=0
+            tou_savings=0
+            full_cost=0
+            flat_no_solar=0
+            flat_solar=0
+            
 
-        for item in items:
-            if item.column_values['actual_price'].value is None or item.column_values['grid'].value is None or item.column_values['total_energy'].value is None or item.column_values['battery'].value is None or item.column_values['battery_price'].value is None or item.column_values['Tax and Fees'].value is None or item.column_values['Comed Fixed'].value is None:
-                continue
-            energy_cost += (item.column_values['grid'].value/1000) * (item.column_values['actual_price'].value/100 + item.column_values['Tax and Fees'].value)
-            flat_no_solar += (item.column_values['total_energy'].value/1000) * (item.column_values['Comed Fixed'].value + item.column_values['Tax and Fees'].value)
-            flat_solar += (item.column_values['grid'].value/1000) * (item.column_values['Comed Fixed'].value + item.column_values['Tax and Fees'].value)
-            battery_savings += (((item.column_values['grid'].value+item.column_values['battery'].value)/1000) * (item.column_values['actual_price'].value/100)) - (((item.column_values['grid'].value/1000) * (item.column_values['actual_price'].value/100)) + ((item.column_values['battery'].value/1000) * (item.column_values['battery_price'].value/100)))
-        print(energy_cost,flat_solar,flat_no_solar,battery_savings)
-        addSavingsChartEntry(group, "Solar Savings",flat_no_solar-flat_solar,start_date_dt.strftime('%Y-%m-%d'),column_name_to_id_hash)
-        addSavingsChartEntry(group, "Actual Energy Cost",energy_cost,start_date_dt.strftime('%Y-%m-%d'),column_name_to_id_hash)
-        addSavingsChartEntry(group, "Battery Savings",battery_savings,start_date_dt.strftime('%Y-%m-%d'),column_name_to_id_hash)
-        addSavingsChartEntry(group, "TOU Savings",flat_no_solar-((flat_no_solar-flat_solar)+battery_savings+energy_cost),start_date_dt.strftime('%Y-%m-%d'),column_name_to_id_hash)
+            for item in items:
+                if item.column_values['actual_price'].value is None or item.column_values['grid'].value is None or item.column_values['total_energy'].value is None or item.column_values['battery'].value is None or item.column_values['battery_price'].value is None or item.column_values['Tax and Fees'].value is None or item.column_values['Comed Fixed'].value is None:
+                    continue
+                energy_cost += (item.column_values['grid'].value/1000) * (item.column_values['actual_price'].value/100 + item.column_values['Tax and Fees'].value)
+                flat_no_solar += (item.column_values['total_energy'].value/1000) * (item.column_values['Comed Fixed'].value + item.column_values['Tax and Fees'].value)
+                flat_solar += (item.column_values['grid'].value/1000) * (item.column_values['Comed Fixed'].value + item.column_values['Tax and Fees'].value)
+                battery_savings += (((item.column_values['grid'].value+item.column_values['battery'].value)/1000) * (item.column_values['actual_price'].value/100)) - (((item.column_values['grid'].value/1000) * (item.column_values['actual_price'].value/100)) + ((item.column_values['battery'].value/1000) * (item.column_values['battery_price'].value/100)))
+            print(energy_cost,flat_solar,flat_no_solar,battery_savings)
+            addSavingsChartEntry(group, "Solar Savings",flat_no_solar-flat_solar,start_date_dt.strftime('%Y-%m-%d'),column_name_to_id_hash)
+            addSavingsChartEntry(group, "Actual Energy Cost",energy_cost,start_date_dt.strftime('%Y-%m-%d'),column_name_to_id_hash)
+            addSavingsChartEntry(group, "Battery Savings",battery_savings,start_date_dt.strftime('%Y-%m-%d'),column_name_to_id_hash)
+            addSavingsChartEntry(group, "TOU Savings",flat_no_solar-((flat_no_solar-flat_solar)+battery_savings+energy_cost),start_date_dt.strftime('%Y-%m-%d'),column_name_to_id_hash)
         start_date_dt+=delta
 
 
@@ -366,8 +374,17 @@ def PopSavingsChartingBaord(config):
 
 if __name__ == "__main__":
     config=initMonCli()
-    #history = DataUtils.getHistory(config)
-    PopSavingsChartingBaord(config)
+    history = DataUtils.getHistory(config)
+    for i in history:
+            history_day=datetime.datetime.strptime(i,'%Y-%m-%d')
+            today=datetime.datetime.today()
+            today+=datetime.timedelta(days=-16)
+            if (history_day>today):
+                UpdateSyncToMonday(config,history[history_day.strftime('%Y-%m-%d')])
+                UpdateSavingsChartingBaord(config,history_day.strftime('%Y-%m-%d'))
+                print(history_day)
+    #PopSavingsChartingBaord(config)
+   
     #UpdateSyncToMonday(config,history['2022-06-05'])
     #UpdateSavingsChartingBaord(config,'2022-06-05')
 

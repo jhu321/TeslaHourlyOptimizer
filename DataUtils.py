@@ -203,10 +203,9 @@ def calcBattsOC(history):
             working_energy-=history[i]['data'][h]['battery']
             if working_energy>42000:
                 working_energy=42000
+            if working_energy<=0:
+                working_energy=0
             history[i]['data'][h]['battery soc']=working_energy
-
-
-
 
 
 
